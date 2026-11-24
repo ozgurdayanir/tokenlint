@@ -25,12 +25,14 @@ function App() {
         function receive(e: MessageEvent<{
             pluginMessage?: Event;
         }>) {
-            if (e.source !== parent)
-                return;
             const m = e.data?.pluginMessage;
             if (!m)
                 return;
             switch (m.type) {
+                case 'collections':
+                    setSetup(previous => previous && {...previous, collections:m.collections, warning:m.warning});
+                    if (m.warning) say(m.warning);
+                    return;
                 case 'located': break;
                 case 'selection':
                     selection(m.count);
@@ -67,6 +69,7 @@ function App() {
                     review(null);
                     say(m.message);
                     break;
+                default: return;
             }
             working('');
         }
@@ -74,6 +77,14 @@ function App() {
         send({ type: 'init' });
         return () => window.removeEventListener('message', receive);
     }, []);
+    useEffect(() => {
+        if (setup || busy !== 'Loading collections…') return;
+        const timer = window.setTimeout(() => {
+            working('');
+            say('TokenLint has not received a startup response from Figma.');
+        }, 15000);
+        return () => window.clearTimeout(timer);
+    }, [setup, busy]);
     function request(m: Command, label: string) { say(''); working(label); send(m); }
     const summary = useMemo(() => audit ? coverage(audit) : null, [audit]);
     const issues = useMemo(() => audit?.rows.filter(r => r.status !== 'Valid Semantic Token' && (group === 'All' || r.group === group) && (status === 'All statuses' || status === r.status)) ?? [], [audit, group, status]);
@@ -99,7 +110,7 @@ function App() {
             <p>{progress} layers scanned</p>
             <button onClick={() => send({ type: 'cancel' })}>Cancel scan</button>
             </>}</div>}
-    <div hidden={!!busy}>{settings && setup ? <Setup first={setup.first} initial={setup.settings} collections={setup.collections} close={() => configure(false)} save={s => request({ type: 'settings', settings: s }, 'Saving settings…')}/> :
+    <div hidden={!!busy || !setup}>{settings && setup ? <Setup first={setup.first} initial={setup.settings} collections={setup.collections} close={() => configure(false)} save={s => request({ type: 'settings', settings: s }, 'Saving settings…')}/> :
             picker && row ? <Picker row={row} items={picker.candidates} skipped={picker.skipped} confirm={confirm} close={() => pick(null)} apply={(id, expanded, confirmation) => request({ type: 'apply', id, key: row.key, expanded, confirmation }, 'Checking binding…')}/> :
                 <main>
                 <section className="panel">

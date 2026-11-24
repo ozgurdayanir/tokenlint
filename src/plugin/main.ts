@@ -4,9 +4,9 @@ import {type Audit, type Collection, defaults, type Row, type Settings} from '..
 
 import {bind, readTarget} from './binding-service';
 import {scan} from './scanner';
-import {candidates, discover} from './variables';
+import {candidates, discoverLibraries, localCollections, within} from './variables';
 
-figma.showUI(__html__, {width: 440, height: 640, themeColors: true});
+
 const post = (e: Event) => figma.ui.postMessage(e);
 let settings: Settings = defaults, collections: Collection[] = [];
 let audit: Audit|null = null, roots: readonly SceneNode[] = [];
@@ -49,20 +49,30 @@ figma.ui.onmessage = async (msg: Command) => {
   busy = true;
   const ticket = ++epoch;
   try {
-    if (msg.type === 'init' || msg.type === 'settings') {
-      if (msg.type === 'settings') {
-        await figma.clientStorage.setAsync('tokenlint.settings.v1', msg.settings);
-        settings = msg.settings;
-        audit = null;
-      }
-      const saved =
-          await figma.clientStorage.getAsync('tokenlint.settings.v1') as Settings | undefined;
-      const data = await discover();
+    if (msg.type === 'settings') {
+      await within(figma.clientStorage.setAsync('tokenlint.settings.v1', msg.settings), 10000,
+          'Settings could not be saved. Please retry.');
       active(ticket);
-      settings = {...defaults, ...saved};
-      collections = data.collections;
-      post({type: 'setup', ...data, settings, first: !saved});
+      settings = msg.settings;
+      audit = null;
+      post({type:'setup', collections, settings, first:false, warning:''});
       selection();
+      return;
+    }
+    if (msg.type === 'init') {
+      const [saved, local] = await within(Promise.all([
+        figma.clientStorage.getAsync('tokenlint.settings.v1') as Promise<Settings | undefined>,
+        localCollections()
+      ]), 10000, 'Figma did not finish loading local collections. Retry setup.');
+      active(ticket);
+      collections = local;
+      settings = {...defaults, ...saved};
+      post({type:'setup', collections, settings, first:!saved, warning:''});
+      selection();
+      void discoverLibraries(local).then(data => {
+        collections = data.collections;
+        post({type:'collections', ...data});
+      });
       return;
     }
     if (msg.type === 'scan') {
@@ -107,3 +117,5 @@ figma.ui.onmessage = async (msg: Command) => {
     if (ticket === epoch) busy = false;
   }
 };
+
+figma.showUI(__html__, {width:440, height:640, themeColors:true});

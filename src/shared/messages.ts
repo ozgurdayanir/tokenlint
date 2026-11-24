@@ -24,7 +24,7 @@ export type Command = {
   expanded: boolean;
   confirmation?: string
 };
-export type Event = {
+export type Event = {type:'collections'; collections:Collection[]; warning:string} | {
   type: 'located'
 }|{
   type: 'setup';

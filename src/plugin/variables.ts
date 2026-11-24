@@ -5,19 +5,25 @@ export const lookup = (id: string) => figma.variables.getVariableByIdAsync(id);
 export async function defaultMode(id: string) {
   return (await figma.variables.getVariableCollectionByIdAsync(id))?.defaultModeId;
 }
-export async function discover() {
-  const collections: Collection[] = (await figma.variables.getLocalVariableCollectionsAsync())
-                                        .map(c => ({key: c.key, name: c.name}));
+export async function within<T>(operation: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([operation, new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(Error(message)), ms);
+    })]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+export async function localCollections(): Promise<Collection[]> {
+  return (await figma.variables.getLocalVariableCollectionsAsync()).map(c => ({key:c.key, name:c.name}));
+}
+export async function discoverLibraries(local: Collection[]) {
+  const collections = [...local];
   let warning = '';
   try {
-    const available = figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-    let timer: ReturnType<typeof setTimeout>|undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(Error('Library discovery timed out.')), 4000);
-    });
-    const libraries = await Promise.race([available, timeout]).finally(() => {
-      if (timer !== undefined) clearTimeout(timer);
-    });
+    const libraries = await within(figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync(),
+        8000, 'Library discovery timed out.');
     for (const c of libraries) {
       if (!collections.some(x => x.key === c.key))
         collections.push({key: c.key, name: c.name, library: c.libraryName});
