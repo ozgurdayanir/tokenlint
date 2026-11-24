@@ -1,0 +1,10 @@
+{
+  "name": "TokenLint",
+  "id": "1627419350824617093",
+  "api": "1.0.0",
+  "main": "dist/main.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {"allowedDomains": ["none"]}
+}
