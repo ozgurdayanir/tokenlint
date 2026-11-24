@@ -5,9 +5,9 @@ export type Group = typeof groups[number];
 export type Role = 'Semantic' | 'Primitive' | 'Other';
 export type Settings = {
   roles: Record<string,Role>; mappings: {prefix:string; category:Category; collection:string}[];
-  groups: Group[]; hidden:boolean; locked:boolean; instances:boolean; controlled:boolean;
+  iconPrefix:string; groups: Group[]; hidden:boolean; locked:boolean; instances:boolean; controlled:boolean;
 };
-export const defaults: Settings = { roles:{}, mappings:[], groups:[...groups], hidden:false,locked:false,instances:false,controlled:false };
+export const defaults: Settings = { roles:{}, iconPrefix:"", mappings:[], groups:[...groups], hidden:false,locked:false,instances:false,controlled:false };
 export type Collection = {key:string; name:string; library?:string};
 export type Value = number | {r:number;g:number;b:number;a:number};
 export const statuses = ['Valid Semantic Token','Missing Token','Primitive Token','Mismatched Token','Other Collection','Unverified'] as const;

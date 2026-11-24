@@ -37,7 +37,9 @@ export function detect(n:SceneNode,s:Settings) {
     const paints=field==='fills'&&'fills' in n?n.fills:field==='strokes'&&'strokes' in n?n.strokes:null;
     if(!Array.isArray(paints)){unsupported++;continue;}
     const styled=field==='fills'?'fillStyleId' in n && n.fillStyleId:'strokeStyleId' in n && n.strokeStyleId;
-    const category:Category=field==='strokes'?'Border Color':n.type==='TEXT'?'Text Color':frames.has(n.type)||n.type==='RECTANGLE'?'Background Color':'Other';
+    const icon=s.iconPrefix.trim().toLowerCase();
+    const isIcon=icon && ancestry(n).some(a=>a.type!=='PAGE' && a.name.toLowerCase().startsWith(icon));
+    const category:Category=field==='strokes'?'Border Color':n.type==='TEXT'?'Text Color':isIcon?'Icon Color':frames.has(n.type)?'Background Color':'Other';
     paints.forEach((paint:Paint,index:number)=>{
       if(paint.visible===false) return;
       if(styled||paint.type!=='SOLID'){unsupported++;return;}
